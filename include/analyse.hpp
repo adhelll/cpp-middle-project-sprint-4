@@ -45,16 +45,15 @@ using FunctionResult = std::pair<function::Function, metric::MetricResults>;
 inline auto AnalyseFunctions(const std::vector<std::string> &files,
                              const analyzer::metric::MetricExtractor &metric_extractor) {
     function::FunctionExtractor function_extractor;
-    std::vector<function::Function> all_functions;
-    for (const auto &file_str : files) {
-        auto file_obj = analyzer::file::File(file_str);
-        auto functions = function_extractor.Get(file_obj);
-        std::ranges::move(functions, std::back_inserter(all_functions));
-    }
 
+    auto extract = [&](const auto &file_str) {
+        auto file_obj = analyzer::file::File(file_str);
+        return function_extractor.Get(file_obj);
+    };
     auto get_metrics = [&](const auto &function) { return std::make_pair(function, metric_extractor.Get(function)); };
 
-    return all_functions | rv::transform(get_metrics) | rs::to<std::vector>();
+    return files | std::views::transform(extract) | std::views::join | rv::transform(get_metrics) |
+           rs::to<std::vector>();
 }
 
 /**
